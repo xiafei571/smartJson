@@ -7,34 +7,33 @@ document.addEventListener('DOMContentLoaded', function() {
   const clearHistoryButton = document.getElementById('clear-history');
   const charCount = document.getElementById('char-count');
 
-  const MAX_CHARS = 5000;
+  const MAX_CHARS = 10000; // 将 5000 改为 10000
 
   let timer;
   const delay = 500; // 500ms delay for lazy mode
 
+  let inputText = ''; // 确保在顶部定义并初始化
+
   // 加载保存的历史记录
   loadHistory();
 
-  function updateCharCount() {
-    const count = inputArea.value.replace(/\s/g, '').length;
-    charCount.textContent = `${count}/${MAX_CHARS}`;
-    if (count > MAX_CHARS) {
-      charCount.style.color = 'red';
-    } else {
-      charCount.style.color = '#666';
-    }
+  function updateInputArea() {
+    inputArea.value = inputText.slice(0, MAX_CHARS);
+    inputText = inputArea.value; // 确保 inputText 与实际显示的内容一致
+    updateCharCount();
   }
 
-  function limitInput() {
-    let value = inputArea.value;
-    let count = value.replace(/\s/g, '').length;
-    if (count > MAX_CHARS) {
-      while (value.replace(/\s/g, '').length > MAX_CHARS) {
-        value = value.slice(0, -1);
-      }
-      inputArea.value = value;
-      updateCharCount();
+  function updateCharCount() {
+    const count = inputText.length;
+    charCount.textContent = `${count}/${MAX_CHARS}`;
+    charCount.style.color = count > MAX_CHARS ? 'red' : '#666';
+  }
+
+  function limitInput(text) {
+    if (text.length > MAX_CHARS) {
+      return text.slice(0, MAX_CHARS);
     }
+    return text;
   }
 
   function isValidJSON(str) {
@@ -62,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function processInput() {
-    const input = inputArea.value.trim();
+    const input = inputText.trim();
     
     if (input === '') {
       outputArea.value = '';
@@ -71,14 +70,18 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    const result = isValidJSON(input);
-    if (result.valid) {
-      outputArea.value = formatJSON(input);
+    const truncatedInput = input.slice(0, MAX_CHARS);
+    
+    // JSON验证
+    try {
+      const parsedJSON = JSON.parse(truncatedInput);
+      const formattedJSON = JSON.stringify(parsedJSON, null, 2);
+      outputArea.value = formattedJSON;
       errorMessageElement.textContent = '';
       setCopyButtonState(true);
-    } else {
-      outputArea.value = 'invalid json';
-      errorMessageElement.textContent = `Error: ${result.error}`;
+    } catch (e) {
+      outputArea.value = 'Invalid JSON';
+      errorMessageElement.textContent = `Error: ${e.message}`;
       setCopyButtonState(false);
     }
   }
@@ -139,7 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
 
     historyItem.querySelector('.input-button').addEventListener('click', function() {
-      inputArea.value = item.fullJson;
+      inputText = item.fullJson;
+      inputArea.value = inputText;
+      updateCharCount();
       processInput();
     });
 
@@ -165,13 +170,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  inputArea.addEventListener('input', function() {
+  inputArea.addEventListener('input', function(e) {
     clearTimeout(timer);
+    inputText = inputArea.value; // 立即更新 inputText
+    updateCharCount(); // 立即更新字符计数
     timer = setTimeout(() => {
-      limitInput();
       processInput();
     }, delay);
+  });
+
+  inputArea.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    inputText = pastedText.slice(0, MAX_CHARS);
+    inputArea.value = inputText;
     updateCharCount();
+    processInput();
+    
+    if (pastedText.length > MAX_CHARS) {
+      errorMessageElement.textContent = `Warning: Pasted content was truncated to ${MAX_CHARS} characters`;
+    }
   });
 
   copyButton.addEventListener('click', function() {
