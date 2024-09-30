@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function addToHistory(json) {
     const compressedJson = compressJSON(json);
-    const truncatedJson = truncateString(compressedJson, 100);  // 从 50 改为 100
+    const truncatedJson = truncateString(compressedJson, 100);
     const currentTime = new Date().toLocaleString();
 
     const historyItem = {
@@ -104,21 +104,16 @@ document.addEventListener('DOMContentLoaded', function() {
       let history = result.history;
       history.unshift(historyItem);
       
-      console.log('Before slice - History length:', history.length);
       // 确保历史记录最多只有5条
       history = history.slice(0, 5);
-      console.log('After slice - History length:', history.length);
       
       chrome.storage.local.set({history: history}, function() {
-        console.log('History saved, updating display');
         updateHistoryDisplay(history);
       });
     });
   }
 
   function updateHistoryDisplay(history) {
-    console.log('Updating history display with', history.length, 'items');
-
     // 清空历史记录列表
     historyList.innerHTML = '';
 
@@ -153,15 +148,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function loadHistory() {
     chrome.storage.local.get({history: []}, function(result) {
-      console.log('Loaded history:', result.history.length, 'items');
       let history = result.history.slice(0, 5);
-      console.log('Displaying', history.length, 'items');
       
       // 如果加载的历史记录超过 5 条，更新存储
       if (result.history.length > 5) {
-        chrome.storage.local.set({history: history}, function() {
-          console.log('Updated stored history to 5 items');
-        });
+        chrome.storage.local.set({history: history});
       }
       
       updateHistoryDisplay(history);
@@ -203,6 +194,4 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 初始化字符计数
   updateCharCount();
-
-  console.log('DOM content loaded');
 });
